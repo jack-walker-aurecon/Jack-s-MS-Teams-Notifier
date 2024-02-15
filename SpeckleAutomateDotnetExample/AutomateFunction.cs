@@ -1,8 +1,14 @@
 using Objects;
 using Objects.Geometry;
+
+using SendGrid;
+using SendGrid.Helpers.Mail;
+
 using Speckle.Automate.Sdk;
 using Speckle.Core.Logging;
 using Speckle.Core.Models.Extensions;
+
+using SpeckleAutomateDotnetExample;
 
 static class AutomateFunction
 {
@@ -19,11 +25,6 @@ static class AutomateFunction
 
     Console.WriteLine("Received version: " + commitObject);
 
-    var count = commitObject
-      .Flatten()
-      .Count(b => b.speckle_type == functionInputs.SpeckleTypeToCount);
-
-    Console.WriteLine($"Counted {count} objects");
-    automationContext.MarkRunSuccess($"Counted {count} objects");
+    await SendGridHelper.Execute(functionInputs, automationContext);
   }
 }
