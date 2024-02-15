@@ -21,7 +21,7 @@ namespace SpeckleAutomateDotnetExample
 {
     public static class SendGridHelper
     {
-        internal static async Task Execute(FunctionInputs inputs, AutomationContext context)
+        internal static async Task Execute(FunctionInputs inputs, AutomationContext context, ISendGridClient client)
         {
             Base? version = await context.ReceiveVersion();
 
@@ -47,7 +47,8 @@ namespace SpeckleAutomateDotnetExample
                 {
                     string name = account.name;
                     string email = account.email;
-                    var _client = new SendGridClient(inputs.SendGridAPIKey);
+                    Console.WriteLine(name);
+                    Console.WriteLine(email);
                     var from = new EmailAddress(email, "Speckle Automate SendGrid Sender");
                     var subject = $"New commit to {context.AutomationRunData.BranchName}: {commit.message}";
                     var to = new EmailAddress(email, name);
@@ -69,7 +70,7 @@ namespace SpeckleAutomateDotnetExample
                     Console.WriteLine("Created email data");
 
                     Console.WriteLine("Sending email data");
-                    var response = await _client.SendEmailAsync(message);
+                    var response = await client.SendEmailAsync(message);
                     Console.WriteLine("Email data sent");
 
                     HttpContent content = response.Body;
