@@ -15,6 +15,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using User = Speckle.Core.Api.User;
+
 namespace SpeckleAutomateDotnetExample
 {
     public static class SendGridHelper
@@ -35,40 +37,51 @@ namespace SpeckleAutomateDotnetExample
             else
             {
                 Console.WriteLine("Creating email objects for sending");
-                string name = context.SpeckleClient.Account.userInfo.name;
-                string email = context.SpeckleClient.Account.userInfo.email;
-                var _client = new SendGridClient(inputs.SendGridAPIKey);
-                var from = new EmailAddress("jack.walker@aurecongroup.com", "Jack Walker");
-                var subject = $"New commit to {context.AutomationRunData.BranchName}: {commit.message}";
-                var to = new EmailAddress(email, name);
+                User account = await context.SpeckleClient.ActiveUserGet();
+                if (account == null)
+                {
+                    context.MarkRunFailed("The active account could not be retrieved");
+                    Console.WriteLine("Could not find account");
+                }
+                else
+                {
+                    string name = account.name;
+                    string email = account.email;
+                    var _client = new SendGridClient(inputs.SendGridAPIKey);
+                    var from = new EmailAddress(email, "Speckle Automate SendGrid Sender");
+                    var subject = $"New commit to {context.AutomationRunData.BranchName}: {commit.message}";
+                    var to = new EmailAddress(email, name);
 
-                string author = commit.authorName;
-                //plain text
-                StringBuilder _stringBuilder = new StringBuilder();
-                _stringBuilder.AppendLine($"Hey {name}!");
-                _stringBuilder.AppendLine($"{author} just added a new commit with the id {commit.id} to your model {commit.branchName}. It has {count} objects in it.");
-                _stringBuilder.AppendLine($"You can access it here: {context.AutomationRunData.SpeckleServerUrl}/projects/{context.AutomationRunData.ProjectId}/models{context.AutomationRunData.ModelId}");
+                    string author = commit.authorName;
+                    //plain text
+                    StringBuilder _stringBuilder = new StringBuilder();
+                    _stringBuilder.AppendLine($"Hey {name}!");
+                    _stringBuilder.AppendLine($"{author} just added a new commit with the id {commit.id} to your model {commit.branchName}. It has {count} objects in it.");
+                    _stringBuilder.AppendLine($"You can access it here: {context.AutomationRunData.SpeckleServerUrl}/projects/{context.AutomationRunData.ProjectId}/models{context.AutomationRunData.ModelId}");
 
-                //html
-                StringBuilder _htmlBuilder = new StringBuilder();
-                _htmlBuilder.AppendLine($"Hey <i>{name}</i>!");
-                _stringBuilder.AppendLine($"{author} just added a new commit with the id <strong>{commit.id}<strong> to your model {commit.branchName}. It has <strong>{count}</strong> objects in it.");
-                _stringBuilder.AppendLine($"You can access it <a href={context.AutomationRunData.SpeckleServerUrl}/projects/{context.AutomationRunData.ProjectId}/models{context.AutomationRunData.ModelId}>here</a>");
+                    //html
+                    StringBuilder _htmlBuilder = new StringBuilder();
+                    _htmlBuilder.AppendLine($"Hey <i>{name}</i>!");
+                    _stringBuilder.AppendLine($"{author} just added a new commit with the id <strong>{commit.id}<strong> to your model {commit.branchName}. It has <strong>{count}</strong> objects in it.");
+                    _stringBuilder.AppendLine($"You can access it <a href={context.AutomationRunData.SpeckleServerUrl}/projects/{context.AutomationRunData.ProjectId}/models{context.AutomationRunData.ModelId}>here</a>");
 
-                var message = MailHelper.CreateSingleEmail(from, to, subject, _stringBuilder.ToString(), _htmlBuilder.ToString());
-                Console.WriteLine("Created email data");
+                    var message = MailHelper.CreateSingleEmail(from, to, subject, _stringBuilder.ToString(), _htmlBuilder.ToString());
+                    Console.WriteLine("Created email data");
 
-                Console.WriteLine("Sending email data");
-                var response = await _client.SendEmailAsync(message);
-                Console.WriteLine("Email data sent");
+                    Console.WriteLine("Sending email data");
+                    var response = await _client.SendEmailAsync(message);
+                    Console.WriteLine("Email data sent");
 
-                HttpContent content = response.Body;
-                string contentAsString = await content.ReadAsStringAsync();
-                Console.WriteLine($"{response.StatusCode}");
-                Console.WriteLine(contentAsString);
+                    HttpContent content = response.Body;
+                    string contentAsString = await content.ReadAsStringAsync();
+                    Console.WriteLine($"{response.StatusCode}");
+                    Console.WriteLine(contentAsString);
 
-                if (response.IsSuccessStatusCode) context.MarkRunFailed($"{response.StatusCode}");
-                else context.MarkRunSuccess($"{response.StatusCode}");
+                    if (response.IsSuccessStatusCode) context.MarkRunFailed($"{response.StatusCode}");
+                    else context.MarkRunSuccess($"{response.StatusCode}");
+                }
+
+
             }
 
         }
