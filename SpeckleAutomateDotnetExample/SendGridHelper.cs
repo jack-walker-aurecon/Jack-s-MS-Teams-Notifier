@@ -27,9 +27,14 @@ namespace SpeckleAutomateDotnetExample
 
             Commit? commit = await context.SpeckleClient.CommitGet(context.AutomationRunData.ProjectId, context.AutomationRunData.VersionId);
 
-            if (commit == null) context.MarkRunFailed("The run failed as the commit could not be retrieved");
+            if (commit == null)
+            {
+                Console.WriteLine("The run failed as the commit could not be retrieved");
+                context.MarkRunFailed("The run failed as the commit could not be retrieved");
+            }
             else
             {
+                Console.WriteLine("Creating email objects for sending");
                 string name = context.SpeckleClient.Account.userInfo.name;
                 string email = context.SpeckleClient.Account.userInfo.email;
                 var _client = new SendGridClient(inputs.SendGridAPIKey);
@@ -37,8 +42,7 @@ namespace SpeckleAutomateDotnetExample
                 var subject = $"New commit to {context.AutomationRunData.BranchName}: {commit.message}";
                 var to = new EmailAddress(email, name);
 
-
-                string author = commit?.authorName == null ? "" : commit.authorName;
+                string author = commit.authorName;
                 //plain text
                 StringBuilder _stringBuilder = new StringBuilder();
                 _stringBuilder.AppendLine($"Hey {name}!");
@@ -52,11 +56,19 @@ namespace SpeckleAutomateDotnetExample
                 _stringBuilder.AppendLine($"You can access it <a href={context.AutomationRunData.SpeckleServerUrl}/projects/{context.AutomationRunData.ProjectId}/models{context.AutomationRunData.ModelId}>here</a>");
 
                 var message = MailHelper.CreateSingleEmail(from, to, subject, _stringBuilder.ToString(), _htmlBuilder.ToString());
+                Console.WriteLine("Created email data");
+
+                Console.WriteLine("Sending email data");
                 var response = await _client.SendEmailAsync(message);
+                Console.WriteLine("Email data sent");
+
                 HttpContent content = response.Body;
                 string contentAsString = await content.ReadAsStringAsync();
-                if (response.IsSuccessStatusCode) context.MarkRunFailed($"{response.StatusCode}: {contentAsString}");
-                else context.MarkRunSuccess($"{response.StatusCode}: {contentAsString}");
+                Console.WriteLine($"{response.StatusCode}");
+                Console.WriteLine(contentAsString);
+
+                if (response.IsSuccessStatusCode) context.MarkRunFailed($"{response.StatusCode}");
+                else context.MarkRunSuccess($"{response.StatusCode}");
             }
 
         }
